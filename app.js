@@ -9,6 +9,7 @@ const MAXDOF = 20;	// max depth of field
 
 const BLOCKSIZE = 64;
 const BLOCKDIV = 4;
+const WALKSPEED = 5;
 
 const Color = core2d.Color;
 const Command = core2d.Command;
@@ -109,9 +110,13 @@ class Renderer extends core2d.Sprite {
 		}
 
 		if (this.controller.keyDown(Command.UP)) {
-			player.x += player.dx*5; player.y += player.dy*5;
+			let destBlock = parseInt((player.y+player.dy*(WALKSPEED+24))/BLOCKSIZE)*MAPH + Math.floor((player.x+player.dx*(WALKSPEED+24))/BLOCKSIZE);
+			debug.text = destBlock;
+			if(MAP[destBlock]===0) { player.x += player.dx*WALKSPEED; player.y += player.dy*WALKSPEED; }
 		} else if (this.controller.keyDown(Command.DOWN)) {
-			player.x -= player.dx*5;	player.y -= player.dy;
+			let destBlock = parseInt((player.y-player.dy*(WALKSPEED+24))/BLOCKSIZE)*MAPH + Math.floor((player.x-player.dx*(WALKSPEED+24))/BLOCKSIZE);
+			debug.text = destBlock;
+			if(MAP[destBlock]===0) { player.x -= player.dx*WALKSPEED;	player.y -= player.dy*WALKSPEED; }
 		}
 	}
 
@@ -174,11 +179,10 @@ class MapView extends core2d.Sprite {
 		context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 		context.lineTo(this.left+ray.rx/BLOCKDIV, this.top+ray.ry/BLOCKDIV);
 		context.stroke();
-		debug.text = player.a;
 		
 		//Draw Player
 		context.fillStyle = Color.Yellow;
-		context.fillRect(this.left+player.x/BLOCKDIV-4, this.top+player.y/BLOCKDIV-4, 8, 8);
+		context.fillRect(this.left+player.x/BLOCKDIV-3, this.top+player.y/BLOCKDIV-3, 6, 6);
 		context.strokeStyle = Color.Yellow;
 		context.beginPath();
 		context.lineWidth = 3;
