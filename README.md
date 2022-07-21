@@ -1,2 +1,2 @@
-# raytracking
-raytracing game engine for core2d
+# raycasting
+Simple raycasting game engine for [core2d](https://github.com/diogoeichert/core2d)
