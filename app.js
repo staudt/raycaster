@@ -4,6 +4,7 @@ const PI = 3.14159265359;
 const PI2 = PI/2;
 const PI3 = 3*PI/2;
 const DR = 0.0174533	// 1 degree in radians
+const FOV = 40;
 const MAXDOF = 20;	// max depth of field
 
 const BLOCKSIZE = 64;
@@ -32,6 +33,25 @@ const MAPH = 10;
 function degToRad(a) { 	return a*PI/180.0; }
 function fixAng(a) { if(a>359) { a-=360; }	if(a<0) { a+=360; }	return a; }
 function distance(ax, ay, bx, by, ang) { return Math.cos(degToRad(ang))*(bx-ax)-Math.sin(degToRad(ang))*(by-ay); }
+
+function lightenDarkenColor(col, amt) {
+	var usePound = false;
+	if (col[0] == "#") {
+			col = col.slice(1);
+			usePound = true;
+	}
+	var num = parseInt(col,16);
+	var r = (num >> 16) + amt;
+	if (r > 255) r = 255;
+	else if  (r < 0) r = 0;
+	var b = ((num >> 8) & 0x00FF) + amt;
+	if (b > 255) b = 255;
+	else if  (b < 0) b = 0;
+	var g = (num & 0x0000FF) + amt;
+	if (g > 255) g = 255;
+	else if (g < 0) g = 0;
+	return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+}
 
 let scene = Core2D.scene().setColor(Color.Navy);
 
@@ -92,9 +112,9 @@ class MapView extends core2d.Sprite {
 		
 		// raycasting
 		let mx,my,mp,dof,side; let vx,vy,rx,ry,ra,xo,yo,disV,disH; 
- 		ra=fixAng(player.a+30); 
+ 		ra=fixAng(player.a+FOV); 
 
-		 for(let r=0;r<60;r++) {
+		 for(let r=0;r<FOV*2;r++) {
 			//---Vertical--- 
 			dof=0; side=0; disV=100000;
 			let Tan=Math.tan(degToRad(ra));
@@ -130,16 +150,16 @@ class MapView extends core2d.Sprite {
 			context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 			context.lineTo(this.left+rx/BLOCKDIV, this.top+ry/BLOCKDIV);
 			context.stroke();
-			debug.text = scene.width;
+			debug.text = disH;
 
 			// 3d line
 			let lineH = (BLOCKSIZE*scene.height)/(disH); if(lineH>scene.height) { lineH=scene.height;} //line height and limit
 			let lineOff = scene.height/2 - (lineH>>1);
-			let lineWidth = (Math.ceil(scene.width/30)+1)/2;
+			let lineWidth = (Math.ceil(scene.width/FOV))/2;
 
-			context.strokeStyle = Color.Green;
+			context.strokeStyle = lightenDarkenColor('#666666', parseInt(-disH/10));
 			context.beginPath();
-			context.lineWidth = lineWidth;
+			context.lineWidth = lineWidth+1;
 			context.moveTo(r*lineWidth, lineOff);
 			context.lineTo(r*lineWidth, lineOff+lineH);
 			context.stroke();
