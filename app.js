@@ -150,14 +150,15 @@ class MapView extends core2d.Sprite {
 			context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 			context.lineTo(this.left+rx/BLOCKDIV, this.top+ry/BLOCKDIV);
 			context.stroke();
-			debug.text = disH;
+			debug.text = disH/10;
 
 			// 3d line
 			let lineH = (BLOCKSIZE*scene.height)/(disH); if(lineH>scene.height) { lineH=scene.height;} //line height and limit
 			let lineOff = scene.height/2 - (lineH>>1);
 			let lineWidth = (Math.ceil(scene.width/FOV))/2;
+			let colorDist = parseInt(-disH/12); if (colorDist < -40) { colorDist=-40; }
 
-			context.strokeStyle = lightenDarkenColor('#666666', parseInt(-disH/10));
+			context.strokeStyle = lightenDarkenColor('#666666', colorDist);
 			context.beginPath();
 			context.lineWidth = lineWidth+1;
 			context.moveTo(r*lineWidth, lineOff);
