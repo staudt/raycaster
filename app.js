@@ -50,7 +50,7 @@ function lightenDarkenColor(color, amount) {
 	return "#" + (g | (b << 8) | (r << 16)).toString(16);
 }
 
-function castRay(px, py, ra) {
+function castRay(px, py, ra, xOrder=0) {
 			//---Vertical--- 
 			let rx, ry;
 			let xo=0; let yo=0; let mx=0; let my=0; let mp=0; let vx=0; let vy=0;
@@ -81,7 +81,7 @@ function castRay(px, py, ra) {
 			}
 			if(disV<disH){ rx=vx; ry=vy; disH=disV; } //horizontal hit first
 			
-			return { rx: rx, ry: ry, disH: disH, disV: disV };
+			return { type: 'ray', rx: rx, ry: ry, disH: disH, xOrder: xOrder };
 }
 
 class Player {
@@ -121,14 +121,22 @@ class Renderer extends core2d.Sprite {
 	}
 
 	render(context) {
-		context.fillStyle = '#55ceff';
+		context.fillStyle = '#55ceff'; // sky
 		context.fillRect(scene.left, scene.top, scene.width, scene.centerY);
-		context.fillStyle = '#202020';
+		context.fillStyle = '#202020'; // floor
 		context.fillRect(scene.left, scene.centerY, scene.width, scene.bottom);
-
+		// cast rays
+		let renderQueue = [];
 		let ra=fixAng(player.a+FOV); 
-		for(let r=0;r<FOV*2;r++) {
-			let ray = castRay(player.x, player.y, ra);
+		for(let r=0;r<FOV*2;++r) {
+			renderQueue.push(castRay(player.x, player.y, ra, r));
+			ra=fixAng(ra-1);
+		}
+		// sort renderQueue from furthest to closest
+		renderQueue.sort((a, b) => (a.disH < b.disH) ? 1 : -1)
+		// render Queue
+		for(let i=0;i<renderQueue.length;++i) {
+			let ray = renderQueue[i];
 			let lineH = (BLOCKSIZE*scene.height)/(ray.disH);
 			if(lineH>scene.height) { lineH=scene.height;} //line height and limit
 			if(lineH>1) {
@@ -139,11 +147,10 @@ class Renderer extends core2d.Sprite {
 				context.strokeStyle = lightenDarkenColor('#666666', colorDist);
 				context.beginPath();
 				context.lineWidth = lineWidth+1;
-				context.moveTo(r*lineWidth, lineOff);
-				context.lineTo(r*lineWidth, lineOff+lineH);
+				context.moveTo(ray.xOrder*lineWidth, lineOff);
+				context.lineTo(ray.xOrder*lineWidth, lineOff+lineH);
 				context.stroke();
 			}
-			ra=fixAng(ra-1);
 		}
 	}
 
