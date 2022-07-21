@@ -121,6 +121,11 @@ class Renderer extends core2d.Sprite {
 	}
 
 	render(context) {
+		context.fillStyle = '#55ceff';
+		context.fillRect(scene.left, scene.top, scene.width, scene.centerY);
+		context.fillStyle = '#202020';
+		context.fillRect(scene.left, scene.centerY, scene.width, scene.bottom);
+
 		let ra=fixAng(player.a+FOV); 
 		for(let r=0;r<FOV*2;r++) {
 			let ray = castRay(player.x, player.y, ra);
@@ -165,32 +170,22 @@ class MapView extends core2d.Sprite {
 				context.fillRect(this.left+1+(BLOCKSIZE/BLOCKDIV*x), this.top+1+(BLOCKSIZE/BLOCKDIV*y), BLOCKSIZE/BLOCKDIV-1, BLOCKSIZE/BLOCKDIV-1);
 			}
 		}
-		// view area
+		// field of view
 		let ray = castRay(player.x, player.y, fixAng(player.a+FOV));
 		context.strokeStyle = Color.Red;
 		context.beginPath();
 		context.lineWidth = 1;
-		context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
-		context.lineTo(this.left+ray.rx/BLOCKDIV, this.top+ray.ry/BLOCKDIV);
-		context.stroke();
+		context.moveTo(this.left+ray.rx/BLOCKDIV, this.top+ray.ry/BLOCKDIV);
+		context.lineTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 		ray = castRay(player.x, player.y, fixAng(player.a-FOV));
-		context.beginPath();
-		context.lineWidth = 1;
-		context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 		context.lineTo(this.left+ray.rx/BLOCKDIV, this.top+ray.ry/BLOCKDIV);
 		context.stroke();
-		
 		//Draw Player
 		context.fillStyle = Color.Yellow;
 		context.fillRect(this.left+player.x/BLOCKDIV-3, this.top+player.y/BLOCKDIV-3, 6, 6);
-		context.strokeStyle = Color.Yellow;
-		context.beginPath();
-		context.lineWidth = 3;
-		context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
-		context.lineTo((this.left+player.x/BLOCKDIV)+player.dx*3, (this.top+player.y/BLOCKDIV)+player.dy*3);
-		context.stroke();
 	}
 }
+
 
 let player = new Player();
 let scene = Core2D.scene().setColor('#000028');
@@ -203,5 +198,6 @@ const debug = new TextSprite().setWidth(160).setHeight(16).setRight(scene.right-
 scene.add(debug);
 
 Core2D.setName("RayCaster");
-Core2D.setAutoScale(false);
+Core2D.setKeepAspect(true);
+Core2D.setAutoScale(true);
 Core2D.init(scene);

@@ -23,8 +23,13 @@
 		}
 
 		canvas {
-			//cursor: none;
+			/*cursor: none;*/
 			image-rendering: pixelated;
+			padding-left: 0;
+			padding-right: 0;
+			margin-left: auto;
+			margin-right: auto;
+			display: block;
 		}
 	</style>
 </head>
@@ -32,7 +37,7 @@
 <body>
 	<div>
 		<!-- set the app virtual resolution here -->
-		<canvas width="1024" height="576"></canvas>
+		<canvas width="1280" height="720"></canvas>
 	</div>
 
 	<div id="assets">
@@ -48,7 +53,6 @@
 	</div>
 
 	<script src="js/core2d.js"></script>
-	<script src="js/plugin.js"></script>
 	<script src="app.js"></script>
 </body>
 
