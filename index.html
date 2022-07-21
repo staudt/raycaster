@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<!-- <link rel="shortcut icon" type="image/png" href="icon16.png" /> -->
+	<meta charset="utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0, width=device-width">
+
+	<style>
+		#assets {
+			height: 1px;
+			overflow: hidden;
+			visibility: hidden;
+			width: 1px;
+		}
+
+		body {
+			background-color: Black;
+			margin: 0;
+			overflow: hidden;
+			padding: 0;
+		}
+
+		canvas {
+			//cursor: none;
+			image-rendering: pixelated;
+		}
+	</style>
+</head>
+
+<body>
+	<div>
+		<!-- set the app virtual resolution here -->
+		<canvas width="1024" height="576"></canvas>
+	</div>
+
+	<div id="assets">
+		<!-- add app assets such as fonts, frames, sounds, themes and tiles (audio and img) here, e.g. -->
+
+		<!-- <img id="player0" src="frames/player0.png" width="16" height="16" /> -->
+
+		<!-- <img id="tile00" src="tiles/tile00.png" width="8" height="8" /> -->
+
+		<!-- <audio id="sound0" src="sounds/sound0.ogg"></audio> -->
+
+		<!-- <audio id="theme0" src="themes/theme0.ogg" loop></audio> -->
+	</div>
+
+	<script src="js/core2d.js"></script>
+	<script src="js/plugin.js"></script>
+	<script src="app.js"></script>
+</body>
+
+</html>
