@@ -29,27 +29,22 @@ const MAP = [
 const MAPW = 10;
 const MAPH = 10;
 
+function degToRad(a) { 	return a*PI/180.0; }
+function fixAng(a) { if(a>359) { a-=360; }	if(a<0) { a+=360; }	return a; }
+function distance(ax, ay, bx, by, ang) { return Math.cos(degToRad(ang))*(bx-ax)-Math.sin(degToRad(ang))*(by-ay); }
+
 let scene = Core2D.scene().setColor(Color.Navy);
 
 const debug = new TextSprite().setWidth(160).setHeight(16).setRight(scene.right-64).setTop(scene.top);
 debug.text = 'debug';
 
 class Player {
-	constructor(x=0, y=0, a=0) {
-		this.x = x;
-		this.y = y;
-		this.a = a;
-		this.dx = 0;
-		this.dy = 0;
-		this.calcDeltas();
-
-	}
-
-	calcDeltas() {
-		if (this.a < 0) { this.a += 2*PI }
-		if (this.a > 2*PI) { this.a -= 2*PI }
-		this.dx = Math.cos(this.a)*4;
-		this.dy = Math.sin(this.a)*4;
+	constructor() {
+		this.x = 150;
+		this.y = 500;
+		this.a = 90;
+		this.dx = Math.cos(degToRad(this.a));
+		this.dy = -Math.sin(degToRad(this.a));
 	}
 }
 
@@ -64,23 +59,23 @@ class MapView extends core2d.Sprite {
 	}
 
 	update() {
+		let player = this.player;
 		if (this.controller.keyDown(Command.LEFT)) {
-			this.player.a -= 0.1;
+			player.a += 5; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
 		} else if (this.controller.keyDown(Command.RIGHT)) {
-			this.player.a += 0.1;
+			player.a -= 5; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
 		}
-		this.player.calcDeltas();
 
 		if (this.controller.keyDown(Command.UP)) {
-			this.player.x += this.player.dx;
-			this.player.y += this.player.dy;
+			player.x += player.dx*5; player.y += player.dy*5;
 		} else if (this.controller.keyDown(Command.DOWN)) {
-			this.player.x -= this.player.dx;
-			this.player.y -= this.player.dy;
+			player.x -= player.dx*5;	player.y -= player.dy;
 		}
 	}
 
 	render(context) {
+		player = this.player;
+
 		context.fillStyle = Color.Black;
 		context.fillRect(this.x, this.y, this.width, this.height);
 
@@ -96,53 +91,60 @@ class MapView extends core2d.Sprite {
 		}
 		
 		// raycasting
-		player = this.player;
-		const dist = (ax, ay, bx, by, ang) => {
-			return Math.sqrt((bx-ax)*(bx-ax) + (by-ay)*(by-ay));
-		}
+		let mx,my,mp,dof,side; let vx,vy,rx,ry,ra,xo,yo,disV,disH; 
+ 		ra=fixAng(player.a+30); 
 
-		let mx = 0;let my = 0; let mp = 0; let dof = 0;
-		let rx = 0; let ry = 0; let xo = 0; let yo = 0;
-		let distH; let distV; let hx; let hy; let vx; let vy; let aTan; let nTan;
-		let ra = player.a-DR*30; if (ra<0) { ra+=2*PI; } if (ra>2*PI) {ra-=2*PI; }
-		for(let r=0;r<60;r++) {
-			// check Horizontal lines
-			dof = 0;
-			distH=1000000; hx=player.x; hy=player.y;
-			aTan = -1/Math.tan(ra);
-			if (ra > PI) { ry = ((player.y>>6)<<6)-0.0001;    rx = (player.y-ry)*aTan+player.x; yo = -BLOCKSIZE; xo=-yo*aTan; } // looking up
-			if (ra < PI) { ry = ((player.y>>6)<<6)+BLOCKSIZE; rx = (player.y-ry)*aTan+player.x; yo = BLOCKSIZE;  xo=-yo*aTan; } // looking down
-			if (ra === 0 || ra === PI) { rx = player.x; ry = player.y; dof = MAXDOF; } // straight left or right
-			while(dof < MAXDOF) {
-				mx = rx>>6; my=ry>>6; mp=my*MAPW+mx;
-				if (mp>0 && mp<MAPW*MAPH && MAP[mp]!=0) { hx=rx; hy=ry; distH=dist(player.x, player.y, hx, hy, ra); dof = MAXDOF; }	// hit a wall
-				else { rx += xo; ry += yo; dof += 1; }	// next line
+		 for(let r=0;r<60;r++) {
+			//---Vertical--- 
+			dof=0; side=0; disV=100000;
+			let Tan=Math.tan(degToRad(ra));
+					if(Math.cos(degToRad(ra))> 0.001) { rx=((player.x>>6)<<6)+64;       ry=(player.x-rx)*Tan+player.y; xo= 64; yo=-xo*Tan;} //looking left
+			else if(Math.cos(degToRad(ra))<-0.001){ rx=((player.x>>6)<<6) -0.0001;  ry=(player.x-rx)*Tan+player.y; xo=-64; yo=-xo*Tan;} //looking right
+			else { rx=player.x; ry=player.y; dof=MAXDOF;}  //looking up or down. no hit  
+		
+			while(dof<MAXDOF) { 
+				mx=(rx)>>6; my=(ry)>>6; mp=my*MAPW+mx;                     
+				if(mp>0 && mp<MAPW*MAPH && MAP[mp]==1){ dof=MAXDOF; disV=Math.cos(degToRad(ra))*(rx-player.x)-Math.sin(degToRad(ra))*(ry-player.y);} //hit
+				else{ rx+=xo; ry+=yo; dof+=1;} //check next horizontal
+			} 
+			vx=rx; vy=ry;
+
+			//---Horizontal---
+			dof=0; disH=100000;
+			Tan=1.0/Tan; 
+					if(Math.sin(degToRad(ra))> 0.001){ ry=((player.y>>6)<<6) -0.0001; rx=(player.y-ry)*Tan+player.x; yo=-64; xo=-yo*Tan;} //looking up 
+			else if(Math.sin(degToRad(ra))<-0.001){ ry=((player.y>>6)<<6)+64;     rx=(player.y-ry)*Tan+player.x; yo= 64; xo=-yo*Tan;} //looking down
+			else{ rx=player.x; ry=player.y; dof=MAXDOF;} //looking straight left or right
+		
+			while(dof<MAXDOF) { 
+				mx=(rx)>>6; my=(ry)>>6; mp=my*MAPW+mx;
+				if(mp>0 && mp<MAPW*MAPH && MAP[mp]==1){ dof=MAXDOF; disH=Math.cos(degToRad(ra))*(rx-player.x)-Math.sin(degToRad(ra))*(ry-player.y);} //hit
+				else{ rx+=xo; ry+=yo; dof+=1;} //check next horizontal
 			}
-
-			// check Vertical lines
-			dof = 0;
-			distV=1000000; vx=player.x; vy=player.y;
-			nTan = -Math.tan(ra);
-			if (ra > PI2 && ra < PI3) { rx = ((player.x>>6)<<6)-0.0001;    ry = (player.x-rx)*nTan+player.y; xo = -BLOCKSIZE; yo=-xo*nTan; } // looking left
-			if (ra < PI2 || ra > PI3) { rx = ((player.x>>6)<<6)+BLOCKSIZE; ry = (player.x-rx)*nTan+player.y; xo = BLOCKSIZE;  yo=-yo*nTan; } // looking right
-			if (ra === 0 || ra === PI) { rx = player.x; ry = player.y; dof = MAXDOF; } // straight up and down
-			while(dof < MAXDOF) {
-				mx = rx>>6; my=ry>>6; mp=my*MAPW+mx;
-				if (mp>0 && mp<MAPW*MAPH && MAP[mp]!=0) { vx=rx; vy=ry; distV=dist(player.x, player.y, vx, vy, ra); dof = MAXDOF; }	// hit a wall
-				else { rx += xo; ry += yo; dof += 1; }	// next line
-			}
-			if(distV<distH) { rx = vx; ry = vy; }
-			if(distH<distV) { rx = hx; ry = hy; }
-
+			if(disV<disH){ rx=vx; ry=vy; disH=disV; } //horizontal hit first
+			
+			// 2d line
 			context.strokeStyle = Color.Red;
 			context.beginPath();
 			context.lineWidth = 1;
 			context.moveTo(this.left+player.x/BLOCKDIV, this.top+player.y/BLOCKDIV);
 			context.lineTo(this.left+rx/BLOCKDIV, this.top+ry/BLOCKDIV);
 			context.stroke();
-			debug.text = ra;
+			debug.text = scene.width;
 
-			ra = player.a-DR*(30-r); if (ra<0) { ra+=2*PI; } if (ra>2*PI) {ra-=2*PI; }
+			// 3d line
+			let lineH = (BLOCKSIZE*scene.height)/(disH); if(lineH>scene.height) { lineH=scene.height;} //line height and limit
+			let lineOff = scene.height/2 - (lineH>>1);
+			let lineWidth = (Math.ceil(scene.width/30)+1)/2;
+
+			context.strokeStyle = Color.Green;
+			context.beginPath();
+			context.lineWidth = lineWidth;
+			context.moveTo(r*lineWidth, lineOff);
+			context.lineTo(r*lineWidth, lineOff+lineH);
+			context.stroke();
+
+			ra=fixAng(ra-1);
 		}
 
 		//Draw Player
