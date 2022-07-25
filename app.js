@@ -31,9 +31,10 @@ const MAP = [
 const MAPW = 10;
 const MAPH = 10;
 
-function degToRad(a) { 	return a*PI/180.0; }
+function degToRad(a) { return a*PI/180.0; }
+function radToDeg(a) { return a*180.0/PI; }
 function fixAng(a) { if(a>359) { a-=360; }	if(a<0) { a+=360; }	return a; }
-function distance(ax, ay, bx, by, ang) { return Math.cos(degToRad(ang))*(bx-ax)-Math.sin(degToRad(ang))*(by-ay); }
+function distance(ax, ay, bx, by) { return Math.sqrt((bx-ax)**2+(by-ay)**2); }
 
 function lightenDarkenColor(color, amount) {
 	color = color.slice(1);
@@ -51,7 +52,7 @@ function lightenDarkenColor(color, amount) {
 }
 
 function castRay(px, py, ra, xOrder=0) {
-			//---Vertical--- 
+			//Vertical
 			let rx, ry;
 			let xo=0; let yo=0; let mx=0; let my=0; let mp=0; let vx=0; let vy=0;
 			let dof=0; let side=0; let disV=100000;
@@ -67,7 +68,7 @@ function castRay(px, py, ra, xOrder=0) {
 			} 
 			vx=rx; vy=ry;
 
-			//---Horizontal---
+			//Horizontal
 			dof=0; let disH=100000;
 			Tan=1.0/Tan; 
 					if(Math.sin(degToRad(ra))> 0.001){ ry=((py>>6)<<6) -0.0001; rx=(py-ry)*Tan+px; yo=-64; xo=-yo*Tan;} //looking up 
@@ -94,6 +95,15 @@ class Player {
 	}
 }
 
+class Dino extends core2d.Sprite {
+	constructor(x, y) {
+		super();
+		this.x = x;
+		this.y = y;
+		this.setImage('dino');
+	}
+}
+
 class Renderer extends core2d.Sprite {
 	constructor(x=0, y=0) {
 		super(x, y);
@@ -104,26 +114,30 @@ class Renderer extends core2d.Sprite {
 
 	update() {
 		if (this.controller.keyDown(Command.LEFT)) {
-			player.a += 5; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
+			player.a += 3; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
 		} else if (this.controller.keyDown(Command.RIGHT)) {
-			player.a -= 5; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
+			player.a -= 3; player.a=fixAng(player.a); player.dx=Math.cos(degToRad(player.a)); player.dy=-Math.sin(degToRad(player.a));
 		}
 
 		if (this.controller.keyDown(Command.UP)) {
 			let destBlock = parseInt((player.y+player.dy*(WALKSPEED+24))/BLOCKSIZE)*MAPH + Math.floor((player.x+player.dx*(WALKSPEED+24))/BLOCKSIZE);
-			debug.text = destBlock;
 			if(MAP[destBlock]===0) { player.x += player.dx*WALKSPEED; player.y += player.dy*WALKSPEED; }
 		} else if (this.controller.keyDown(Command.DOWN)) {
 			let destBlock = parseInt((player.y-player.dy*(WALKSPEED+24))/BLOCKSIZE)*MAPH + Math.floor((player.x-player.dx*(WALKSPEED+24))/BLOCKSIZE);
-			debug.text = destBlock;
 			if(MAP[destBlock]===0) { player.x -= player.dx*WALKSPEED;	player.y -= player.dy*WALKSPEED; }
 		}
 	}
 
 	render(context) {
-		context.fillStyle = '#55ceff'; // sky
+		var gradient = context.createLinearGradient(0, 0, 0, scene.centerY);
+		gradient.addColorStop(1, "#ffffff");
+		gradient.addColorStop(0, "#55ceff");
+		context.fillStyle = gradient;
 		context.fillRect(scene.left, scene.top, scene.width, scene.centerY);
-		context.fillStyle = '#202020'; // floor
+		var gradient = context.createLinearGradient(0, scene.centerY, 0, scene.bottom);
+		gradient.addColorStop(0, "#201000");
+		gradient.addColorStop(1, "#964B00");
+		context.fillStyle = gradient;
 		context.fillRect(scene.left, scene.centerY, scene.width, scene.bottom);
 		// cast rays
 		let renderQueue = [];
@@ -132,24 +146,50 @@ class Renderer extends core2d.Sprite {
 			renderQueue.push(castRay(player.x, player.y, ra, r));
 			ra=fixAng(ra-1);
 		}
+
+		// add creatures
+		for (let creature of MAPCREATURES) {
+			renderQueue.push({type: 'creature', obj: creature, disH: distance(player.x, player.y, creature.x, creature.y)});
+		}
+		
 		// sort renderQueue from furthest to closest
 		renderQueue.sort((a, b) => (a.disH < b.disH) ? 1 : -1)
 		// render Queue
-		for(let i=0;i<renderQueue.length;++i) {
-			let ray = renderQueue[i];
-			let lineH = (BLOCKSIZE*scene.height)/(ray.disH);
-			if(lineH>scene.height) { lineH=scene.height;} //line height and limit
-			if(lineH>1) {
-				let lineOff = scene.height/2 - (lineH>>1);
-				let lineWidth = (Math.ceil(scene.width/FOV))/2;
-				let colorDist = parseInt(-ray.disH/8); if (colorDist < -66) { colorDist=-66; }
+		for(let i=0;i<renderQueue.length;i++) {
+			if(renderQueue[i].type === 'ray') {
+				let ray = renderQueue[i];
+				let lineH = (BLOCKSIZE*scene.height)/(ray.disH);
+				if(lineH>scene.height) { lineH=scene.height;} //line height and limit
+				if(lineH>1) {
+					let lineOff = scene.height/2 - (lineH>>1);
+					let lineWidth = (Math.ceil(scene.width/FOV))/2;
+					let colorDist = parseInt(-ray.disH/8); if (colorDist < -66) { colorDist=-66; }
 
-				context.strokeStyle = lightenDarkenColor('#666666', colorDist);
-				context.beginPath();
-				context.lineWidth = lineWidth+1;
-				context.moveTo(ray.xOrder*lineWidth, lineOff);
-				context.lineTo(ray.xOrder*lineWidth, lineOff+lineH);
-				context.stroke();
+					context.strokeStyle = lightenDarkenColor('#964B00', colorDist);
+					context.beginPath();
+					context.lineWidth = lineWidth+1;
+					context.moveTo(ray.xOrder*lineWidth, lineOff);
+					context.lineTo(ray.xOrder*lineWidth, lineOff+lineH);
+					context.stroke();
+				}
+			} else if (renderQueue[i].type === 'creature') {
+				let disH = renderQueue[i].disH;
+				debug.text = renderQueue[i].obj.x;
+				let sx = renderQueue[i].obj.x-player.x;
+				let sy = renderQueue[i].obj.y-player.y;
+				let sz = 0;
+				let a = sy * Math.cos(degToRad(player.a)) + sx * Math.sin(degToRad(player.a));
+				let b = sx * Math.cos(degToRad(player.a)) - sy * Math.sin(degToRad(player.a));
+				sx=a; sy=b;
+
+				if (sy > 0) {	// void drawing in reverse position
+					let w = (BLOCKSIZE*scene.height)/(disH);
+					let h = (BLOCKSIZE*scene.height)/(disH);
+					sx = (sx*(scene.width-BLOCKSIZE)/sy)+(scene.width/2);
+					sy = (sz*(scene.width-BLOCKSIZE)/sy)+(scene.height/2);
+
+					context.drawImage(renderQueue[i].obj._animation.image, sx-w/2, sy-h/2+20, w, h);
+				}
 			}
 		}
 	}
@@ -190,12 +230,18 @@ class MapView extends core2d.Sprite {
 		//Draw Player
 		context.fillStyle = Color.Yellow;
 		context.fillRect(this.left+player.x/BLOCKDIV-3, this.top+player.y/BLOCKDIV-3, 6, 6);
+
+		//Draw Creatures
+		for (let creature of MAPCREATURES) {
+			context.fillStyle = Color.Red;
+			context.fillRect(this.left+creature.x/BLOCKDIV-3, this.top+creature.y/BLOCKDIV-3, 6, 6);
+			}
 	}
 }
 
+let scene = Core2D.scene();
 
 let player = new Player();
-let scene = Core2D.scene().setColor('#000028');
 let renderer = new Renderer();
 scene.add(renderer);
 let mapView = new MapView();
@@ -203,6 +249,11 @@ scene.add(mapView);
 
 const debug = new TextSprite().setWidth(160).setHeight(16).setRight(scene.right-64).setTop(scene.top);
 scene.add(debug);
+
+const MAPCREATURES = [
+	new Dino(100, 400),
+	new Dino(400, 400)
+];
 
 Core2D.setName("RayCaster");
 Core2D.setKeepAspect(true);
